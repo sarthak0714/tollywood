@@ -9,57 +9,43 @@ import (
 )
 
 type ActorSystem struct {
-	actors map[string]*actor.Actor
-	mu     sync.RWMutex
+	actors sync.Map
 }
 
 func NewActorSystem() *ActorSystem {
-	return &ActorSystem{
-		actors: make(map[string]*actor.Actor),
-	}
+	return &ActorSystem{}
 }
 
 func (s *ActorSystem) SpawnActor(id string) (*actor.Actor, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.actors[id]; exists {
+	if _, exists := s.actors.Load(id); exists {
 		return nil, fmt.Errorf("actor with id %s already exists", id)
 	}
 
 	newActor := actor.NewActor(id)
-	s.actors[id] = newActor
+	s.actors.Store(id, newActor)
 	newActor.Start()
 	return newActor, nil
 }
 
 func (s *ActorSystem) GetActor(id string) (*actor.Actor, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	actor, exists := s.actors[id]
-	return actor, exists
+	if a, exists := s.actors.Load(id); exists {
+		return a.(*actor.Actor), true
+	}
+	return nil, false
 }
 
 func (s *ActorSystem) TerminateActor(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	actor, exists := s.actors[id]
-	if !exists {
-		return fmt.Errorf("actor with id %s not found", id)
+	if a, exists := s.actors.LoadAndDelete(id); exists {
+		a.(*actor.Actor).Stop()
+		return nil
 	}
-
-	actor.Stop()
-	delete(s.actors, id)
-	return nil
+	return fmt.Errorf("actor with id %s not found", id)
 }
 
 func (s *ActorSystem) SendMessage(envelope *proto.Envelope) error {
-	actor, exists := s.GetActor(envelope.Target)
-	if !exists {
-		return fmt.Errorf("actor with id %s not found", envelope.Target)
+	if a, exists := s.actors.Load(envelope.Target); exists {
+		a.(*actor.Actor).Send(envelope)
+		return nil
 	}
-
-	actor.Send(envelope)
-	return nil
+	return fmt.Errorf("actor with id %s not found", envelope.Target)
 }

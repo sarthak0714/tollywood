@@ -1,19 +1,17 @@
-build:
-	go build -o bin/actorengine ./cmd/actorengine
-
-test:
-	go test -v ./...
-
-run: build
-	./bin/actorengine
-
-clean:
-	rm -rf bin
+.PHONY: proto
 
 proto:
-	protoc --go_out=. --go_opt=paths=source_relative pkg/pb/messages.proto
+	@protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/messages.proto
 
-deps:
-	go mod tidy
-	go mod verify
+test:
+	@go test ./... -v
+
+
+bench:
+	@go test -bench=. ./test/benchmark 
+
+
+
 

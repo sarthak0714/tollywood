@@ -1,35 +1,36 @@
 syntax = "proto3";
+
 package proto;
 
 option go_package = "github.com/sarthak0714/tollywood/proto";
 
 message Envelope {
-    string sender=1;
-    string target=2;
-    bytes data=3;
+  string sender = 1;
+  string target = 2;
+  bytes message_data = 3;
 }
 
-message RemoteCommand{
-    oneof command{
-        SpawnActor spawn_actor=1;
-        TerminateActor terminate_actor=2;
-    }
+message RemoteCommand {
+  oneof command {
+    SpawnActor spawn_actor = 1;
+    TerminateActor terminate_actor = 2;
+  }
 }
 
-message SpawnActor{
-    string actor_id=1;
+message SpawnActor {
+  string actor_id = 1;
 }
 
-message TerminateActor{
-    string actor_id=1;
-}
-
-service RemoteService {
-    rpc Receive (stream Envelope) returns (stream Envelope) {}
-    rpc Command (RemoteCommand) returns (CommandResponse) {}
+message TerminateActor {
+  string actor_id = 1;
 }
 
 message CommandResponse {
-    bool success = 1;
-    string message = 2;
+  bool success = 1;
+  string message = 2;
+}
+
+service RemoteService {
+  rpc Receive (stream Envelope) returns (stream Envelope) {}
+  rpc Command (RemoteCommand) returns (CommandResponse) {}
 }
