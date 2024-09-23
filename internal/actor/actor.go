@@ -3,14 +3,23 @@ package actor
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/sarthak0714/tollywood/proto"
+)
+
+type ActorState int32
+
+const (
+	Running ActorState = iota
+	Stopped
 )
 
 type Actor struct {
 	ID       string
 	mailbox  chan *proto.Envelope
 	ctx      context.Context
+	state    ActorState
 	cancelch chan struct{}
 }
 
@@ -20,6 +29,7 @@ func NewActor(id string) *Actor {
 		ID:       id,
 		mailbox:  make(chan *proto.Envelope, 100),
 		ctx:      ctx,
+		state:    Running,
 		cancelch: make(chan struct{}, 1),
 	}
 }
@@ -29,7 +39,10 @@ func (a *Actor) Start() {
 }
 
 func (a *Actor) Stop() {
-	a.cancelch <- struct{}{}
+	if atomic.CompareAndSwapInt32((*int32)(&a.state), int32(Running), int32(Stopped)) {
+		a.cancelch <- struct{}{}
+
+	}
 }
 
 func (a *Actor) Send(envelope *proto.Envelope) {
